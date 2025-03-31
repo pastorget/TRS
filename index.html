@@ -6,12 +6,35 @@
         <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <link rel="stylesheet" href="css/leaflet.css">
-        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
-        <link rel="stylesheet" href="css/qgis2web.css">
-        <link rel="stylesheet" href="css/fontawesome-all.min.css">
-        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
-        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <link rel="stylesheet" href="./resources/ol.css">
+        <link rel="stylesheet" href="resources/fontawesome-all.min.css">
+        <link href="resources/ol-geocoder.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="./resources/ol-layerswitcher.css">
+        <link rel="stylesheet" href="./resources/qgis2web.css">
+        <style>
+        html, body {
+            background-color: #ffffff;
+        }
+        .ol-control > * {
+            background-color: #f8f8f8!important;
+            color: #444444!important;
+            border-radius: 0px;
+        }
+        .ol-attribution a, .gcd-gl-input::placeholder, .search-layer-input-search::placeholder {
+            color: #444444!important;
+        }
+        .search-layer-input-search {
+            background-color: #f8f8f8!important;
+        }
+        .ol-control > *:focus, .ol-control >*:hover {
+            background-color: rgba(248, 248, 248, 0.7)!important;
+        } 
+        .ol-control {
+            background-color: rgba(255,255,255,.4) !important;
+            padding: 2px !important;
+        } 
+        </style>
+
         <style>
         html, body, #map {
             width: 100%;
@@ -24,497 +47,20 @@
     </head>
     <body>
         <div id="map">
+            <div id="popup" class="ol-popup">
+                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                <div id="popup-content"></div>
+            </div>
         </div>
-        <script src="js/qgis2web_expressions.js"></script>
-        <script src="js/leaflet.js"></script>
-        <script src="js/L.Control.Layers.Tree.min.js"></script>
-        <script src="js/leaflet.rotatedMarker.js"></script>
-        <script src="js/leaflet.pattern.js"></script>
-        <script src="js/leaflet-hash.js"></script>
-        <script src="js/Autolinker.min.js"></script>
-        <script src="js/rbush.min.js"></script>
-        <script src="js/labelgun.min.js"></script>
-        <script src="js/labels.js"></script>
-        <script src="js/leaflet.wms.js"></script>
-        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
-        <script src="js/leaflet-measure.js"></script>
-        <script src="data/Yhdistetty_Linja4_rajaukset_1.js"></script>
-        <script src="data/Yhdistettytaso_2.js"></script>
-        <script src="data/linja4_kohteet_tiedoilla_3.js"></script>
-        <script>
-        var highlightLayer;
-        function highlightFeature(e) {
-            highlightLayer = e.target;
-
-            if (e.target.feature.geometry.type === 'LineString' || e.target.feature.geometry.type === 'MultiLineString') {
-              highlightLayer.setStyle({
-                color: '#ffff00',
-              });
-            } else {
-              highlightLayer.setStyle({
-                fillColor: '#ffff00',
-                fillOpacity: 1
-              });
-            }
-            highlightLayer.openPopup();
-        }
-        var map = L.map('map', {
-            zoomControl:false, maxZoom:28, minZoom:1
-        }).fitBounds([[62.84199762339319,27.464648094920662],[62.94941686311721,27.906070724148062]]);
-        var hash = new L.Hash(map);
-        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
-        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
-        // remove popup's row if "visible-with-data"
-        function removeEmptyRowsFromPopupContent(content, feature) {
-         var tempDiv = document.createElement('div');
-         tempDiv.innerHTML = content;
-         var rows = tempDiv.querySelectorAll('tr');
-         for (var i = 0; i < rows.length; i++) {
-             var td = rows[i].querySelector('td.visible-with-data');
-             var key = td ? td.id : '';
-             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
-                 rows[i].parentNode.removeChild(rows[i]);
-             }
-         }
-         return tempDiv.innerHTML;
-        }
-        // add class to format popup if it contains media
-		function addClassToPopupIfMedia(content, popup) {
-			var tempDiv = document.createElement('div');
-			tempDiv.innerHTML = content;
-			if (tempDiv.querySelector('td img')) {
-				popup._contentNode.classList.add('media');
-					// Delay to force the redraw
-					setTimeout(function() {
-						popup.update();
-					}, 10);
-			} else {
-				popup._contentNode.classList.remove('media');
-			}
-		}
-        var zoomControl = L.control.zoom({
-            position: 'topleft'
-        }).addTo(map);
-        var measureControl = new L.Control.Measure({
-            position: 'topleft',
-            primaryLengthUnit: 'meters',
-            secondaryLengthUnit: 'kilometers',
-            primaryAreaUnit: 'sqmeters',
-            secondaryAreaUnit: 'hectares'
-        });
-        measureControl.addTo(map);
-        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
-        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
-        var bounds_group = new L.featureGroup([]);
-        function setBounds() {
-        }
-        map.createPane('pane_peruskartta_0');
-        map.getPane('pane_peruskartta_0').style.zIndex = 400;
-        var layer_peruskartta_0 = L.WMS.layer("https://tiles.kartat.kapsi.fi/peruskartta", "peruskartta", {
-            pane: 'pane_peruskartta_0',
-            format: 'image/png',
-            uppercase: true,
-            transparent: true,
-            continuousWorld : true,
-            tiled: true,
-            info_format: 'text/html',
-            opacity: 1,
-            identify: false,
-            attribution: '',
-        });
-        map.addLayer(layer_peruskartta_0);
-        function pop_Yhdistetty_Linja4_rajaukset_1(feature, layer) {
-            layer.on({
-                mouseout: function(e) {
-                    for (var i in e.target._eventParents) {
-                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
-                            e.target._eventParents[i].resetStyle(e.target);
-                        }
-                    }
-                    if (typeof layer.closePopup == 'function') {
-                        layer.closePopup();
-                    } else {
-                        layer.eachLayer(function(feature){
-                            feature.closePopup()
-                        });
-                    }
-                },
-                mouseover: highlightFeature,
-            });
-            var popupContent = '<table>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['path'] !== null ? autolinker.link(String(feature.properties['path']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['ID_1'] !== null ? autolinker.link(String(feature.properties['ID_1']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Tyyppi'] !== null ? autolinker.link(String(feature.properties['Tyyppi']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pinta-ala'] !== null ? autolinker.link(String(feature.properties['Pinta-ala']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                </table>';
-            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
-			layer.on('popupopen', function(e) {
-				addClassToPopupIfMedia(content, e.popup);
-			});
-			layer.bindPopup(content, { maxHeight: 400 });
-        }
-
-        function style_Yhdistetty_Linja4_rajaukset_1_0() {
-            return {
-                pane: 'pane_Yhdistetty_Linja4_rajaukset_1',
-                opacity: 1,
-                color: 'rgba(35,35,35,1.0)',
-                dashArray: '',
-                lineCap: 'butt',
-                lineJoin: 'miter',
-                weight: 1.0, 
-                fill: true,
-                fillOpacity: 1,
-                fillColor: 'rgba(114,155,111,1.0)',
-                interactive: true,
-            }
-        }
-        map.createPane('pane_Yhdistetty_Linja4_rajaukset_1');
-        map.getPane('pane_Yhdistetty_Linja4_rajaukset_1').style.zIndex = 401;
-        map.getPane('pane_Yhdistetty_Linja4_rajaukset_1').style['mix-blend-mode'] = 'normal';
-        var layer_Yhdistetty_Linja4_rajaukset_1 = new L.geoJson(json_Yhdistetty_Linja4_rajaukset_1, {
-            attribution: '',
-            interactive: true,
-            dataVar: 'json_Yhdistetty_Linja4_rajaukset_1',
-            layerName: 'layer_Yhdistetty_Linja4_rajaukset_1',
-            pane: 'pane_Yhdistetty_Linja4_rajaukset_1',
-            onEachFeature: pop_Yhdistetty_Linja4_rajaukset_1,
-            style: style_Yhdistetty_Linja4_rajaukset_1_0,
-        });
-        bounds_group.addLayer(layer_Yhdistetty_Linja4_rajaukset_1);
-        map.addLayer(layer_Yhdistetty_Linja4_rajaukset_1);
-        function pop_Yhdistettytaso_2(feature, layer) {
-            layer.on({
-                mouseout: function(e) {
-                    for (var i in e.target._eventParents) {
-                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
-                            e.target._eventParents[i].resetStyle(e.target);
-                        }
-                    }
-                    if (typeof layer.closePopup == 'function') {
-                        layer.closePopup();
-                    } else {
-                        layer.eachLayer(function(feature){
-                            feature.closePopup()
-                        });
-                    }
-                },
-                mouseover: highlightFeature,
-            });
-            var popupContent = '<table>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['path'] !== null ? autolinker.link(String(feature.properties['path']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['ID_1'] !== null ? autolinker.link(String(feature.properties['ID_1']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Tyyppi'] !== null ? autolinker.link(String(feature.properties['Tyyppi']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pinta-ala'] !== null ? autolinker.link(String(feature.properties['Pinta-ala']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Numero'] !== null ? autolinker.link(String(feature.properties['Numero']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['id'] !== null ? autolinker.link(String(feature.properties['id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Alue'] !== null ? autolinker.link(String(feature.properties['Alue']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Tyyppi_2'] !== null ? autolinker.link(String(feature.properties['Tyyppi_2']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Yleiskaavamerkintä'] !== null ? autolinker.link(String(feature.properties['Yleiskaavamerkintä']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Asemakaavamerkintä'] !== null ? autolinker.link(String(feature.properties['Asemakaavamerkintä']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Nykytila'] !== null ? autolinker.link(String(feature.properties['Nykytila']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Runkolinjapysäkki (m keskipisteestä)'] !== null ? autolinker.link(String(feature.properties['Runkolinjapysäkki (m keskipisteestä)']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Palvelukeskittymät (keskusta, aluekeskus, palvelukeskus)'] !== null ? autolinker.link(String(feature.properties['Palvelukeskittymät (keskusta, aluekeskus, palvelukeskus)']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pientalopaino_Käyttötarkoitus'] !== null ? autolinker.link(String(feature.properties['Pientalopaino_Käyttötarkoitus']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pientalopaino_Tehokkuus'] !== null ? autolinker.link(String(feature.properties['Pientalopaino_Tehokkuus']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pientalopaino_K-M2 arvio'] !== null ? autolinker.link(String(feature.properties['Pientalopaino_K-M2 arvio']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pientalopaino_Asukaslisäys'] !== null ? autolinker.link(String(feature.properties['Pientalopaino_Asukaslisäys']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Kustannukset (per asukas)'] !== null ? autolinker.link(String(feature.properties['Kustannukset (per asukas)']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Toteutumisehto'] !== null ? autolinker.link(String(feature.properties['Toteutumisehto']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Soveltuva'] !== null ? autolinker.link(String(feature.properties['Soveltuva']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Tärkeä nykytilassaan'] !== null ? autolinker.link(String(feature.properties['Tärkeä nykytilassaan']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Maaperä'] !== null ? autolinker.link(String(feature.properties['Maaperä']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Hulevesi'] !== null ? autolinker.link(String(feature.properties['Hulevesi']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Liikenne ja kt-suunnittelu'] !== null ? autolinker.link(String(feature.properties['Liikenne ja kt-suunnittelu']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Luonto'] !== null ? autolinker.link(String(feature.properties['Luonto']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Viher ja virkistys'] !== null ? autolinker.link(String(feature.properties['Viher ja virkistys']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Tonttipalvelut'] !== null ? autolinker.link(String(feature.properties['Tonttipalvelut']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Kokonaispisteet'] !== null ? autolinker.link(String(feature.properties['Kokonaispisteet']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Lisätiedot'] !== null ? autolinker.link(String(feature.properties['Lisätiedot']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Lasten_osuus_ennuste'] !== null ? autolinker.link(String(feature.properties['Lasten_osuus_ennuste']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Hallinta'] !== null ? autolinker.link(String(feature.properties['Hallinta']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                </table>';
-            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
-			layer.on('popupopen', function(e) {
-				addClassToPopupIfMedia(content, e.popup);
-			});
-			layer.bindPopup(content, { maxHeight: 400 });
-        }
-
-        function style_Yhdistettytaso_2_0() {
-            return {
-                pane: 'pane_Yhdistettytaso_2',
-                opacity: 1,
-                color: 'rgba(35,35,35,1.0)',
-                dashArray: '',
-                lineCap: 'butt',
-                lineJoin: 'miter',
-                weight: 1.0, 
-                fill: true,
-                fillOpacity: 1,
-                fillColor: 'rgba(190,178,151,1.0)',
-                interactive: true,
-            }
-        }
-        map.createPane('pane_Yhdistettytaso_2');
-        map.getPane('pane_Yhdistettytaso_2').style.zIndex = 402;
-        map.getPane('pane_Yhdistettytaso_2').style['mix-blend-mode'] = 'normal';
-        var layer_Yhdistettytaso_2 = new L.geoJson(json_Yhdistettytaso_2, {
-            attribution: '',
-            interactive: true,
-            dataVar: 'json_Yhdistettytaso_2',
-            layerName: 'layer_Yhdistettytaso_2',
-            pane: 'pane_Yhdistettytaso_2',
-            onEachFeature: pop_Yhdistettytaso_2,
-            style: style_Yhdistettytaso_2_0,
-        });
-        bounds_group.addLayer(layer_Yhdistettytaso_2);
-        map.addLayer(layer_Yhdistettytaso_2);
-        function pop_linja4_kohteet_tiedoilla_3(feature, layer) {
-            layer.on({
-                mouseout: function(e) {
-                    for (var i in e.target._eventParents) {
-                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
-                            e.target._eventParents[i].resetStyle(e.target);
-                        }
-                    }
-                    if (typeof layer.closePopup == 'function') {
-                        layer.closePopup();
-                    } else {
-                        layer.eachLayer(function(feature){
-                            feature.closePopup()
-                        });
-                    }
-                },
-                mouseover: highlightFeature,
-            });
-            var popupContent = '<table>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Tyyppi'] !== null ? autolinker.link(String(feature.properties['Tyyppi']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pinta-ala'] !== null ? autolinker.link(String(feature.properties['Pinta-ala']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Alue'] !== null ? autolinker.link(String(feature.properties['Alue']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Tyyppi_2</th>\
-                        <td class="visible-with-data" id="Tyyppi_2">' + (feature.properties['Tyyppi_2'] !== null ? autolinker.link(String(feature.properties['Tyyppi_2']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Yleiskaavamerkintä</th>\
-                        <td class="visible-with-data" id="Yleiskaavamerkintä">' + (feature.properties['Yleiskaavamerkintä'] !== null ? autolinker.link(String(feature.properties['Yleiskaavamerkintä']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Asemakaavamerkintä</th>\
-                        <td class="visible-with-data" id="Asemakaavamerkintä">' + (feature.properties['Asemakaavamerkintä'] !== null ? autolinker.link(String(feature.properties['Asemakaavamerkintä']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Nykytila</th>\
-                        <td class="visible-with-data" id="Nykytila">' + (feature.properties['Nykytila'] !== null ? autolinker.link(String(feature.properties['Nykytila']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Runkolinjapysäkki (m keskipisteestä)</th>\
-                        <td class="visible-with-data" id="Runkolinjapysäkki (m keskipisteestä)">' + (feature.properties['Runkolinjapysäkki (m keskipisteestä)'] !== null ? autolinker.link(String(feature.properties['Runkolinjapysäkki (m keskipisteestä)']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Palvelukeskittymät (keskusta, aluekeskus, palvelukeskus)</th>\
-                        <td class="visible-with-data" id="Palvelukeskittymät (keskusta, aluekeskus, palvelukeskus)">' + (feature.properties['Palvelukeskittymät (keskusta, aluekeskus, palvelukeskus)'] !== null ? autolinker.link(String(feature.properties['Palvelukeskittymät (keskusta, aluekeskus, palvelukeskus)']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Pientalopaino_Käyttötarkoitus</th>\
-                        <td class="visible-with-data" id="Pientalopaino_Käyttötarkoitus">' + (feature.properties['Pientalopaino_Käyttötarkoitus'] !== null ? autolinker.link(String(feature.properties['Pientalopaino_Käyttötarkoitus']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pientalopaino_Tehokkuus'] !== null ? autolinker.link(String(feature.properties['Pientalopaino_Tehokkuus']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Pientalopaino_K-M2 arvio'] !== null ? autolinker.link(String(feature.properties['Pientalopaino_K-M2 arvio']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Pientalopaino_Asukaslisäys</th>\
-                        <td class="visible-with-data" id="Pientalopaino_Asukaslisäys">' + (feature.properties['Pientalopaino_Asukaslisäys'] !== null ? autolinker.link(String(feature.properties['Pientalopaino_Asukaslisäys']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Kustannukset (per asukas)</th>\
-                        <td class="visible-with-data" id="Kustannukset (per asukas)">' + (feature.properties['Kustannukset (per asukas)'] !== null ? autolinker.link(String(feature.properties['Kustannukset (per asukas)']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Toteutumisehto</th>\
-                        <td class="visible-with-data" id="Toteutumisehto">' + (feature.properties['Toteutumisehto'] !== null ? autolinker.link(String(feature.properties['Toteutumisehto']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Soveltuva</th>\
-                        <td class="visible-with-data" id="Soveltuva">' + (feature.properties['Soveltuva'] !== null ? autolinker.link(String(feature.properties['Soveltuva']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <th scope="row">Tärkeä nykytilassaan</th>\
-                        <td class="visible-with-data" id="Tärkeä nykytilassaan">' + (feature.properties['Tärkeä nykytilassaan'] !== null ? autolinker.link(String(feature.properties['Tärkeä nykytilassaan']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Maaperä'] !== null ? autolinker.link(String(feature.properties['Maaperä']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Hulevesi'] !== null ? autolinker.link(String(feature.properties['Hulevesi']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Liikenne ja kt-suunnittelu'] !== null ? autolinker.link(String(feature.properties['Liikenne ja kt-suunnittelu']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Luonto'] !== null ? autolinker.link(String(feature.properties['Luonto']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Viher ja virkistys'] !== null ? autolinker.link(String(feature.properties['Viher ja virkistys']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Tonttipalvelut'] !== null ? autolinker.link(String(feature.properties['Tonttipalvelut']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Kokonaispisteet'] !== null ? autolinker.link(String(feature.properties['Kokonaispisteet']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Lisätiedot'] !== null ? autolinker.link(String(feature.properties['Lisätiedot']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Lasten_osuus_ennuste'] !== null ? autolinker.link(String(feature.properties['Lasten_osuus_ennuste']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                    <tr>\
-                        <td colspan="2">' + (feature.properties['Hallinta'] !== null ? autolinker.link(String(feature.properties['Hallinta']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
-                    </tr>\
-                </table>';
-            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
-			layer.on('popupopen', function(e) {
-				addClassToPopupIfMedia(content, e.popup);
-			});
-			layer.bindPopup(content, { maxHeight: 400 });
-        }
-
-        function style_linja4_kohteet_tiedoilla_3_0() {
-            return {
-                pane: 'pane_linja4_kohteet_tiedoilla_3',
-                opacity: 1,
-                color: 'rgba(35,35,35,1.0)',
-                dashArray: '',
-                lineCap: 'butt',
-                lineJoin: 'miter',
-                weight: 1.0, 
-                fill: true,
-                fillOpacity: 1,
-                fillColor: 'rgba(125,139,143,1.0)',
-                interactive: true,
-            }
-        }
-        map.createPane('pane_linja4_kohteet_tiedoilla_3');
-        map.getPane('pane_linja4_kohteet_tiedoilla_3').style.zIndex = 403;
-        map.getPane('pane_linja4_kohteet_tiedoilla_3').style['mix-blend-mode'] = 'normal';
-        var layer_linja4_kohteet_tiedoilla_3 = new L.geoJson(json_linja4_kohteet_tiedoilla_3, {
-            attribution: '',
-            interactive: true,
-            dataVar: 'json_linja4_kohteet_tiedoilla_3',
-            layerName: 'layer_linja4_kohteet_tiedoilla_3',
-            pane: 'pane_linja4_kohteet_tiedoilla_3',
-            onEachFeature: pop_linja4_kohteet_tiedoilla_3,
-            style: style_linja4_kohteet_tiedoilla_3_0,
-        });
-        bounds_group.addLayer(layer_linja4_kohteet_tiedoilla_3);
-        map.addLayer(layer_linja4_kohteet_tiedoilla_3);
-        var osmGeocoder = new L.Control.Geocoder({
-            collapsed: true,
-            position: 'topleft',
-            text: 'Search',
-            title: 'Testing'
-        }).addTo(map);
-        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
-        .className += ' fa fa-search';
-        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
-        .title += 'Search for a place';
-        var overlaysTree = [
-            {label: '<img src="legend/linja4_kohteet_tiedoilla_3.png" /> linja4_kohteet_tiedoilla', layer: layer_linja4_kohteet_tiedoilla_3},
-            {label: '<img src="legend/Yhdistettytaso_2.png" /> Yhdistetty taso', layer: layer_Yhdistettytaso_2},
-            {label: '<img src="legend/Yhdistetty_Linja4_rajaukset_1.png" /> Yhdistetty_Linja4_rajaukset', layer: layer_Yhdistetty_Linja4_rajaukset_1},
-            {label: "peruskartta", layer: layer_peruskartta_0},]
-        var lay = L.control.layers.tree(null, overlaysTree,{
-            //namedToggle: true,
-            //selectorBack: false,
-            //closedSymbol: '&#8862; &#x1f5c0;',
-            //openedSymbol: '&#8863; &#x1f5c1;',
-            //collapseAll: 'Collapse all',
-            //expandAll: 'Expand all',
-            collapsed: true,
-        });
-        lay.addTo(map);
-        setBounds();
-        </script>
+        <script src="resources/qgis2web_expressions.js"></script>
+        <script src="./resources/functions.js"></script>
+        <script src="./resources/ol.js"></script>
+        <script src="./resources/ol-layerswitcher.js"></script>
+        <script src="resources/ol-geocoder.js"></script>
+        <script src="layers/linja4_inverse_1.js"></script><script src="layers/Yhdistetty_Linja4_rajaukset_2.js"></script><script src="layers/Yhdistettytaso_3.js"></script><script src="layers/linja4_kohteet_tiedoilla_4.js"></script>
+        <script src="styles/linja4_inverse_1_style.js"></script><script src="styles/Yhdistetty_Linja4_rajaukset_2_style.js"></script><script src="styles/Yhdistettytaso_3_style.js"></script><script src="styles/linja4_kohteet_tiedoilla_4_style.js"></script>
+        <script src="./layers/layers.js" type="text/javascript"></script> 
+        <script src="./resources/Autolinker.min.js"></script>
+        <script src="./resources/qgis2web.js"></script>
     </body>
 </html>
