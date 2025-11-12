@@ -617,5 +617,96 @@ document.getElementById("calcBtn").addEventListener("click", () => {
   `;
 });
 </script>
+		<script>
+// --- Configuration: list your QGIS2Web layer variables ---
+// Replace these with your actual layer variable names from qgis2web:
+const availableLayers = {
+  "Yhdistetty_Linja4_rajaukset": layer_Yhdistetty_Linja4_rajaukset_1,
+  "Yhdistettytaso": layer_Yhdistettytaso_2,
+  "Linja4_kohteet_tiedoilla": layer_linja4_kohteet_tiedoilla_3
+};
+
+// --- Initialize dropdowns ---
+const layerSelect = document.getElementById("layerSelect");
+const attrSelect = document.getElementById("attrSelect");
+const statsResult = document.getElementById("statsResult");
+const calcBtn = document.getElementById("calcBtn");
+
+// Populate the layer dropdown
+Object.keys(availableLayers).forEach(layerName => {
+  const opt = document.createElement("option");
+  opt.value = layerName;
+  opt.textContent = layerName;
+  layerSelect.appendChild(opt);
+});
+
+// When a layer is chosen, load its attribute names
+layerSelect.addEventListener("change", () => {
+  const selectedLayer = availableLayers[layerSelect.value];
+  attrSelect.innerHTML = "";
+  if (!selectedLayer) return;
+
+  // Extract first feature's properties
+  let firstFeature = null;
+  selectedLayer.eachLayer(f => {
+    if (!firstFeature) firstFeature = f.feature;
+  });
+  if (!firstFeature) return;
+
+  const props = firstFeature.properties;
+  Object.keys(props).forEach(attr => {
+    const opt = document.createElement("option");
+    opt.value = attr;
+    opt.textContent = attr;
+    attrSelect.appendChild(opt);
+  });
+});
+
+// When "Calculate" is pressed
+calcBtn.addEventListener("click", () => {
+  const selectedLayer = availableLayers[layerSelect.value];
+  const attr = attrSelect.value;
+  if (!selectedLayer || !attr) {
+    statsResult.innerHTML = "<i>Select layer and attribute first.</i>";
+    return;
+  }
+
+  // Collect attribute values
+  const values = [];
+  selectedLayer.eachLayer(f => {
+    const val = f.feature.properties[attr];
+    if (typeof val === "number" || !isNaN(parseFloat(val))) {
+      values.push(parseFloat(val));
+    }
+  });
+
+  if (values.length === 0) {
+    statsResult.innerHTML = "No numeric values found.";
+    return;
+  }
+
+  // Compute stats
+  const n = values.length;
+  const sum = values.reduce((a, b) => a + b, 0);
+  const mean = sum / n;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const sorted = values.slice().sort((a, b) => a - b);
+  const median = (n % 2 === 0)
+    ? (sorted[n/2 - 1] + sorted[n/2]) / 2
+    : sorted[Math.floor(n/2)];
+
+  // Display results
+  statsResult.innerHTML = `
+    <b>Count:</b> ${n}<br>
+    <b>Mean:</b> ${mean.toFixed(2)}<br>
+    <b>Median:</b> ${median.toFixed(2)}<br>
+    <b>Min:</b> ${min.toFixed(2)}<br>
+    <b>Max:</b> ${max.toFixed(2)}<br>
+    <b>Sum:</b> ${sum.toFixed(2)}
+  `;
+});
+</script>
+
     </body>
 </html>
