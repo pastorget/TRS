@@ -538,5 +538,84 @@
         lay.addTo(map);
         setBounds();
         </script>
+		<script>
+// --- Configuration: list your QGIS2Web layer variables ---
+const availableLayers = {
+  "Schools": layer_Schools,
+  "Districts": layer_Districts,
+  // add your other layers here
+};
+
+// --- Initialize dropdowns ---
+const layerSelect = document.getElementById("layerSelect");
+const attrSelect = document.getElementById("attrSelect");
+const statsResult = document.getElementById("statsResult");
+
+// Populate the layer dropdown
+Object.keys(availableLayers).forEach(layerName => {
+  const opt = document.createElement("option");
+  opt.value = layerName;
+  opt.textContent = layerName;
+  layerSelect.appendChild(opt);
+});
+
+// When a layer is chosen, load its attribute names
+layerSelect.addEventListener("change", () => {
+  const layer = availableLayers[layerSelect.value];
+  attrSelect.innerHTML = "";
+  if (!layer) return;
+
+  // Get first feature's attributes to list available fields
+  const features = layer.getSource().getFeatures();
+  if (features.length === 0) return;
+  const props = features[0].getProperties();
+  Object.keys(props).forEach(key => {
+    if (key !== "geometry") {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = key;
+      attrSelect.appendChild(opt);
+    }
+  });
+});
+
+// --- Function to compute stats ---
+function computeStats(values) {
+  const numeric = values.map(v => parseFloat(v)).filter(v => !isNaN(v));
+  const sum = numeric.reduce((a,b)=>a+b,0);
+  const mean = numeric.length ? sum / numeric.length : 0;
+  const min = Math.min(...numeric);
+  const max = Math.max(...numeric);
+  return {
+    count: numeric.length,
+    sum: sum.toFixed(2),
+    mean: mean.toFixed(2),
+    min: min.toFixed(2),
+    max: max.toFixed(2)
+  };
+}
+
+// --- Button click event ---
+document.getElementById("calcBtn").addEventListener("click", () => {
+  const layer = availableLayers[layerSelect.value];
+  const attr = attrSelect.value;
+  if (!layer || !attr) {
+    statsResult.innerHTML = "<i>Please select layer and attribute.</i>";
+    return;
+  }
+
+  const features = layer.getSource().getFeatures();
+  const values = features.map(f => f.get(attr));
+  const stats = computeStats(values);
+
+  statsResult.innerHTML = `
+    <b>${attr}</b> (${stats.count} features)<br>
+    Sum: ${stats.sum}<br>
+    Mean: ${stats.mean}<br>
+    Min: ${stats.min}<br>
+    Max: ${stats.max}
+  `;
+});
+</script>
     </body>
 </html>
