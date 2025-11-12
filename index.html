@@ -25,6 +25,28 @@
     <body>
         <div id="map">
         </div>
+		<!-- Stats UI -->
+		<div id="stats-panel" style="
+		  position: absolute;
+		  bottom: 10px;
+		  left: 10px;
+		  background: rgba(255,255,255,0.9);
+		  border-radius: 10px;
+		  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+		  padding: 10px;
+		  z-index: 9999;
+		  font-family: sans-serif;
+		  width: 220px;
+		">
+		  <h4 style="margin: 0 0 5px 0;">Statistics</h4>
+		  <label>Layer:</label><br>
+		  <select id="layerSelect" style="width:100%; margin-bottom:5px;"></select><br>
+		  <label>Attribute:</label><br>
+		  <select id="attrSelect" style="width:100%; margin-bottom:8px;"></select>
+		  <button id="calcBtn" style="width:100%;">Calculate</button>
+		  <hr>
+		  <div id="statsResult" style="font-size: 0.9em;"></div>
+		</div>
         <script src="js/qgis2web_expressions.js"></script>
         <script src="js/leaflet.js"></script>
         <script src="js/L.Control.Layers.Tree.min.js"></script>
